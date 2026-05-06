@@ -1,0 +1,155 @@
+name: Agent Anvil
+description: Run Agent Anvil scenario suites in CI and publish trace-first eval artifacts.
+author: agent-axiom
+
+branding:
+  icon: activity
+  color: purple
+
+inputs:
+  scenario:
+    description: Path to the Agent Anvil YAML scenario suite.
+    required: true
+  runs-dir:
+    description: Directory where Agent Anvil should write run artifacts.
+    required: false
+    default: runs/agent-anvil
+  offline:
+    description: Run with deterministic offline grading instead of OpenAI semantic grading.
+    required: false
+    default: "false"
+  agent-mode:
+    description: Demo agent mode. Use offline for deterministic CI demos or openai for the bundled OpenAI tool-calling agent.
+    required: false
+    default: ""
+  trials:
+    description: Override scenario trial count.
+    required: false
+    default: ""
+  expected-exit-code:
+    description: Expected exit code from anvil run. Use 1 for intentional-regression demos.
+    required: false
+    default: "0"
+  github-summary:
+    description: Append an Agent Anvil run summary to the GitHub Step Summary.
+    required: false
+    default: "true"
+  pr-comment:
+    description: Render a pull-request comment body to pr-comment-path.
+    required: false
+    default: "false"
+  post-pr-comment:
+    description: Post the rendered Agent Anvil summary as a pull-request comment.
+    required: false
+    default: "false"
+  pr-comment-path:
+    description: File path for the rendered pull-request comment body.
+    required: false
+    default: agent-anvil-pr-comment.md
+  python-version:
+    description: Python version for running uvx.
+    required: false
+    default: "3.12"
+  uv-cache:
+    description: Enable uv dependency cache.
+    required: false
+    default: "false"
+  agent-anvil-ref:
+    description: Agent Anvil git tag, branch, or commit to install.
+    required: false
+    default: v0.2.18
+  install-source:
+    description: Python package source passed to uvx --from.
+    required: false
+    default: git+https://github.com/agent-axiom/agent-anvil
+
+runs:
+  using: composite
+  steps:
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v8.1.0
+      with:
+        enable-cache: ${{ inputs.uv-cache }}
+        python-version: ${{ inputs.python-version }}
+
+    - name: Run Agent Anvil
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        AGENT_ANVIL_SCENARIO: ${{ inputs.scenario }}
+        AGENT_ANVIL_RUNS_DIR: ${{ inputs.runs-dir }}
+        AGENT_ANVIL_OFFLINE: ${{ inputs.offline }}
+        AGENT_ANVIL_AGENT_MODE: ${{ inputs.agent-mode }}
+        AGENT_ANVIL_TRIALS: ${{ inputs.trials }}
+        AGENT_ANVIL_EXPECTED_EXIT_CODE: ${{ inputs.expected-exit-code }}
+        AGENT_ANVIL_GITHUB_SUMMARY: ${{ inputs.github-summary }}
+        AGENT_ANVIL_PR_COMMENT: ${{ inputs.pr-comment }}
+        AGENT_ANVIL_POST_PR_COMMENT: ${{ inputs.post-pr-comment }}
+        AGENT_ANVIL_PR_COMMENT_PATH: ${{ inputs.pr-comment-path }}
+        AGENT_ANVIL_REF: ${{ inputs.agent-anvil-ref }}
+        AGENT_ANVIL_INSTALL_SOURCE: ${{ inputs.install-source }}
+      run: |
+        set -euo pipefail
+
+        scenario="${AGENT_ANVIL_SCENARIO}"
+        runs_dir="${AGENT_ANVIL_RUNS_DIR}"
+        comment_path="${AGENT_ANVIL_PR_COMMENT_PATH}"
+
+        if [[ "${scenario}" != /* ]]; then
+          scenario="${GITHUB_WORKSPACE}/${scenario}"
+        fi
+        if [[ "${runs_dir}" != /* ]]; then
+          runs_dir="${GITHUB_WORKSPACE}/${runs_dir}"
+        fi
+        if [[ "${comment_path}" != /* ]]; then
+          comment_path="${GITHUB_WORKSPACE}/${comment_path}"
+        fi
+
+        cd "${GITHUB_WORKSPACE}"
+
+        package_source="${AGENT_ANVIL_INSTALL_SOURCE}"
+        if [[ "${package_source}" == git+* && -n "${AGENT_ANVIL_REF}" ]]; then
+          package_source="${package_source}@${AGENT_ANVIL_REF}"
+        fi
+
+        anvil=(uvx --from "${package_source}" anvil)
+        run_args=(run "${scenario}" --runs-dir "${runs_dir}")
+
+        if [[ "${AGENT_ANVIL_OFFLINE}" == "true" ]]; then
+          run_args+=(--offline)
+        fi
+        if [[ -n "${AGENT_ANVIL_AGENT_MODE}" ]]; then
+          run_args+=(--agent-mode "${AGENT_ANVIL_AGENT_MODE}")
+        fi
+        if [[ -n "${AGENT_ANVIL_TRIALS}" ]]; then
+          run_args+=(--trials "${AGENT_ANVIL_TRIALS}")
+        fi
+
+        set +e
+        "${anvil[@]}" "${run_args[@]}"
+        exit_code=$?
+        set -e
+
+        if [[ "${exit_code}" != "0" ]]; then
+          "${anvil[@]}" repair "${runs_dir}/latest" || true
+        fi
+
+        if [[ "${AGENT_ANVIL_GITHUB_SUMMARY}" == "true" && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+          "${anvil[@]}" summary "${runs_dir}/latest" --github >> "${GITHUB_STEP_SUMMARY}" || true
+        fi
+
+        if [[ "${AGENT_ANVIL_PR_COMMENT}" == "true" || "${AGENT_ANVIL_POST_PR_COMMENT}" == "true" ]]; then
+          "${anvil[@]}" pr-comment "${runs_dir}/latest" --out "${comment_path}" || true
+        fi
+
+        if [[ "${AGENT_ANVIL_POST_PR_COMMENT}" == "true" && "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
+          pr_number="${{ github.event.pull_request.number }}"
+          if [[ -n "${pr_number}" ]]; then
+            gh pr comment "${pr_number}" --body-file "${comment_path}" || true
+          fi
+        fi
+
+        if [[ "${exit_code}" != "${AGENT_ANVIL_EXPECTED_EXIT_CODE}" ]]; then
+          echo "Agent Anvil exit code ${exit_code}, expected ${AGENT_ANVIL_EXPECTED_EXIT_CODE}."
+          exit 1
+        fi
