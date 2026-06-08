@@ -78,6 +78,7 @@ deltas.
 | `agent-mode` | empty | Demo agent mode: `offline` or `openai`. |
 | `trials` | empty | Override scenario trial count. |
 | `expected-exit-code` | `0` | Expected `anvil run` exit code. |
+| `require-manifest` | `true` | Validate `manifest.json` hashes for the generated run. |
 | `github-summary` | `true` | Append a GitHub Step Summary. |
 | `pr-comment` | `false` | Render a PR comment body to a file. |
 | `post-pr-comment` | `false` | Post the PR comment with `gh pr comment`. |
@@ -95,6 +96,7 @@ Agent Anvil writes:
 
 - `runs/agent-anvil/latest/report.md`
 - `runs/agent-anvil/latest/results.json`
+- `runs/agent-anvil/latest/manifest.json`
 - `runs/agent-anvil/latest/traces/*.json`
 - optional repair plans and PR comment summaries
 

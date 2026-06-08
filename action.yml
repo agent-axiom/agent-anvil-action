@@ -30,6 +30,10 @@ inputs:
     description: Expected exit code from anvil run. Use 1 for intentional-regression demos.
     required: false
     default: "0"
+  require-manifest:
+    description: Validate that the generated run contains manifest.json with matching artifact hashes.
+    required: false
+    default: "true"
   github-summary:
     description: Append an Agent Anvil run summary to the GitHub Step Summary.
     required: false
@@ -90,6 +94,7 @@ runs:
         AGENT_ANVIL_AGENT_MODE: ${{ inputs.agent-mode }}
         AGENT_ANVIL_TRIALS: ${{ inputs.trials }}
         AGENT_ANVIL_EXPECTED_EXIT_CODE: ${{ inputs.expected-exit-code }}
+        AGENT_ANVIL_REQUIRE_MANIFEST: ${{ inputs.require-manifest }}
         AGENT_ANVIL_GITHUB_SUMMARY: ${{ inputs.github-summary }}
         AGENT_ANVIL_PR_COMMENT: ${{ inputs.pr-comment }}
         AGENT_ANVIL_POST_PR_COMMENT: ${{ inputs.post-pr-comment }}
@@ -145,6 +150,12 @@ runs:
         if [[ "${exit_code}" != "0" ]]; then
           "${anvil[@]}" repair "${runs_dir}/latest" || true
         fi
+
+        validate_run_args=(validate run "${runs_dir}/latest")
+        if [[ "${AGENT_ANVIL_REQUIRE_MANIFEST}" == "true" ]]; then
+          validate_run_args=(validate --require-manifest run "${runs_dir}/latest")
+        fi
+        "${anvil[@]}" "${validate_run_args[@]}"
 
         if [[ "${AGENT_ANVIL_GITHUB_SUMMARY}" == "true" && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
           "${anvil[@]}" summary "${runs_dir}/latest" --github >> "${GITHUB_STEP_SUMMARY}" || true
