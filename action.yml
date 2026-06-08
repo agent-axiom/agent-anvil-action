@@ -69,7 +69,7 @@ inputs:
   agent-anvil-ref:
     description: Agent Anvil git tag, branch, or commit to install.
     required: false
-    default: v0.2.53
+    default: v0.2.54
   install-source:
     description: Python package source passed to uvx --from.
     required: false
