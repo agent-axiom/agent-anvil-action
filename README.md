@@ -64,6 +64,9 @@ Use `expected-exit-code: "1"` when the scenario is supposed to catch a regressio
 ```
 
 The action also appends a compact eval summary to the GitHub Step Summary by default.
+Set `compare-baseline` to a prior Agent Anvil run directory when you want the PR
+comment to include baseline-vs-latest pass-rate, failure, scenario, and flaky-run
+deltas.
 
 ## Inputs
 
@@ -79,8 +82,10 @@ The action also appends a compact eval summary to the GitHub Step Summary by def
 | `pr-comment` | `false` | Render a PR comment body to a file. |
 | `post-pr-comment` | `false` | Post the PR comment with `gh pr comment`. |
 | `pr-comment-path` | `agent-anvil-pr-comment.md` | Output path for the rendered comment body. |
+| `compare-baseline` | empty | Optional baseline run directory for compare-aware PR comments. |
+| `compare-path` | `agent-anvil-compare.json` | Output path for the generated compare JSON artifact. |
 | `python-version` | `3.12` | Python version used by `uvx`. |
-| `uv-cache` | `true` | Enable uv dependency caching. |
+| `uv-cache` | `false` | Enable uv dependency caching. |
 | `agent-anvil-ref` | `v0.2.18` | Agent Anvil git tag, branch, or commit to install. |
 | `install-source` | `git+https://github.com/agent-axiom/agent-anvil` | Package source passed to `uvx --from`. |
 

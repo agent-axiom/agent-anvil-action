@@ -46,6 +46,14 @@ inputs:
     description: File path for the rendered pull-request comment body.
     required: false
     default: agent-anvil-pr-comment.md
+  compare-baseline:
+    description: Optional baseline run directory for compare-aware pull-request comments.
+    required: false
+    default: ""
+  compare-path:
+    description: File path for the generated compare JSON artifact.
+    required: false
+    default: agent-anvil-compare.json
   python-version:
     description: Python version for running uvx.
     required: false
@@ -86,6 +94,8 @@ runs:
         AGENT_ANVIL_PR_COMMENT: ${{ inputs.pr-comment }}
         AGENT_ANVIL_POST_PR_COMMENT: ${{ inputs.post-pr-comment }}
         AGENT_ANVIL_PR_COMMENT_PATH: ${{ inputs.pr-comment-path }}
+        AGENT_ANVIL_COMPARE_BASELINE: ${{ inputs.compare-baseline }}
+        AGENT_ANVIL_COMPARE_PATH: ${{ inputs.compare-path }}
         AGENT_ANVIL_REF: ${{ inputs.agent-anvil-ref }}
         AGENT_ANVIL_INSTALL_SOURCE: ${{ inputs.install-source }}
       run: |
@@ -138,8 +148,25 @@ runs:
           "${anvil[@]}" summary "${runs_dir}/latest" --github >> "${GITHUB_STEP_SUMMARY}" || true
         fi
 
+        compare_path=""
+        if [[ -n "${AGENT_ANVIL_COMPARE_BASELINE}" ]]; then
+          baseline_dir="${AGENT_ANVIL_COMPARE_BASELINE}"
+          compare_path="${AGENT_ANVIL_COMPARE_PATH}"
+          if [[ "${baseline_dir}" != /* ]]; then
+            baseline_dir="${GITHUB_WORKSPACE}/${baseline_dir}"
+          fi
+          if [[ "${compare_path}" != /* ]]; then
+            compare_path="${GITHUB_WORKSPACE}/${compare_path}"
+          fi
+          "${anvil[@]}" compare "${baseline_dir}" "${runs_dir}/latest" --out "${compare_path}"
+        fi
+
         if [[ "${AGENT_ANVIL_PR_COMMENT}" == "true" || "${AGENT_ANVIL_POST_PR_COMMENT}" == "true" ]]; then
-          "${anvil[@]}" pr-comment "${runs_dir}/latest" --out "${comment_path}" || true
+          comment_args=(pr-comment "${runs_dir}/latest" --out "${comment_path}")
+          if [[ -n "${compare_path}" ]]; then
+            comment_args+=(--compare "${compare_path}")
+          fi
+          "${anvil[@]}" "${comment_args[@]}" || true
         fi
 
         if [[ "${AGENT_ANVIL_POST_PR_COMMENT}" == "true" && "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
