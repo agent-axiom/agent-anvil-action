@@ -63,11 +63,9 @@ def test_action_reports_artifact_trust_in_github_summary() -> None:
         'validate_run_json_args=(validate --json --require-manifest run "${runs_dir}/latest")'
         in run_script
     )
-    assert 'VALIDATE_RUN_JSON="${validate_run_json}" python - <<' in run_script
-    assert "artifact_trust" in run_script
-    assert "### Artifact trust" in run_script
-    assert "Trace index:" in run_script
-    assert "Manifest:" in run_script
+    assert "render_artifact_trust_summary.py" in run_script
+    assert 'python "${GITHUB_ACTION_PATH}/scripts/render_artifact_trust_summary.py"' in run_script
+    assert '>> "${GITHUB_STEP_SUMMARY}" || true' in run_script
 
 
 def test_repository_runs_metadata_ci() -> None:
