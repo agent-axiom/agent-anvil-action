@@ -159,6 +159,36 @@ runs:
 
         if [[ "${AGENT_ANVIL_GITHUB_SUMMARY}" == "true" && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
           "${anvil[@]}" summary "${runs_dir}/latest" --github >> "${GITHUB_STEP_SUMMARY}" || true
+          validate_run_json_args=(validate --json run "${runs_dir}/latest")
+          if [[ "${AGENT_ANVIL_REQUIRE_MANIFEST}" == "true" ]]; then
+            validate_run_json_args=(validate --json --require-manifest run "${runs_dir}/latest")
+          fi
+          validate_run_json="$("${anvil[@]}" "${validate_run_json_args[@]}")"
+          VALIDATE_RUN_JSON="${validate_run_json}" python - <<'PY' >> "${GITHUB_STEP_SUMMARY}" || true
+        import json
+        import os
+
+        payload = json.loads(os.environ["VALIDATE_RUN_JSON"])
+        trust = payload.get("artifact_trust") or {}
+
+        print("")
+        print("### Artifact trust")
+        trace_status = "verified" if trust.get("trace_index_verified") else "not verified"
+        print(f"- Trace index: {trace_status}")
+
+        if trust.get("manifest_present"):
+            count = trust.get("manifest_file_count", 0)
+            verified = (
+                trust.get("manifest_hashes_verified") == count
+                and trust.get("manifest_sizes_verified") == count
+                and trust.get("manifest_coverage_verified")
+            )
+            manifest_status = "verified" if verified else "present"
+            print(f"- Manifest: {manifest_status} {count} artifacts")
+        else:
+            requirement = "required" if trust.get("manifest_required") else "optional"
+            print(f"- Manifest: not present ({requirement})")
+        PY
         fi
 
         compare_path=""
