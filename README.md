@@ -88,7 +88,7 @@ deltas.
 | `compare-path` | `agent-anvil-compare.json` | Output path for the generated compare JSON artifact. |
 | `python-version` | `3.12` | Python version used by `uvx`. |
 | `uv-cache` | `false` | Enable uv dependency caching. |
-| `agent-anvil-ref` | `v0.2.57` | Agent Anvil git tag, branch, or commit to install. |
+| `agent-anvil-ref` | `v0.2.58` | Agent Anvil git tag, branch, or commit to install. |
 | `install-source` | `git+https://github.com/agent-axiom/agent-anvil` | Package source passed to `uvx --from`. |
 
 ## Artifacts
