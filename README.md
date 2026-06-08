@@ -63,7 +63,8 @@ Use `expected-exit-code: "1"` when the scenario is supposed to catch a regressio
     post-pr-comment: "true"
 ```
 
-The action also appends a compact eval summary to the GitHub Step Summary by default.
+The action also appends a compact eval summary and artifact-trust section to the
+GitHub Step Summary by default.
 Set `compare-baseline` to a prior Agent Anvil run directory when you want the PR
 comment to include baseline-vs-latest pass-rate, failure, scenario, and flaky-run
 deltas.

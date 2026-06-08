@@ -54,6 +54,22 @@ def test_action_can_require_run_manifest_after_eval() -> None:
     assert '"${anvil[@]}" "${validate_run_args[@]}"' in run_script
 
 
+def test_action_reports_artifact_trust_in_github_summary() -> None:
+    action = load_yaml(ROOT / "action.yml")
+    run_script = action["runs"]["steps"][1]["run"]
+
+    assert 'validate_run_json_args=(validate --json run "${runs_dir}/latest")' in run_script
+    assert (
+        'validate_run_json_args=(validate --json --require-manifest run "${runs_dir}/latest")'
+        in run_script
+    )
+    assert 'VALIDATE_RUN_JSON="${validate_run_json}" python - <<' in run_script
+    assert "artifact_trust" in run_script
+    assert "### Artifact trust" in run_script
+    assert "Trace index:" in run_script
+    assert "Manifest:" in run_script
+
+
 def test_repository_runs_metadata_ci() -> None:
     workflow = ROOT / ".github" / "workflows" / "ci.yml"
 
