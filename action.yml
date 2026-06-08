@@ -123,6 +123,8 @@ runs:
         fi
 
         anvil=(uvx --from "${package_source}" anvil)
+        "${anvil[@]}" validate --json "${scenario}"
+
         run_args=(run "${scenario}" --runs-dir "${runs_dir}")
 
         if [[ "${AGENT_ANVIL_OFFLINE}" == "true" ]]; then

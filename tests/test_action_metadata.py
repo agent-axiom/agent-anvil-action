@@ -30,6 +30,15 @@ def test_action_uses_stable_external_actions() -> None:
     assert uses_refs == ["astral-sh/setup-uv@v8.1.0"]
 
 
+def test_action_validates_scenario_before_running_eval() -> None:
+    action = load_yaml(ROOT / "action.yml")
+    run_script = action["runs"]["steps"][1]["run"]
+
+    validate_index = run_script.index('validate --json "${scenario}"')
+    run_index = run_script.index('"${anvil[@]}" "${run_args[@]}"')
+    assert validate_index < run_index
+
+
 def test_repository_runs_metadata_ci() -> None:
     workflow = ROOT / ".github" / "workflows" / "ci.yml"
 
