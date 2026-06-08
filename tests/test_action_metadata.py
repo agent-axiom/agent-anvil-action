@@ -6,7 +6,7 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-AGENT_ANVIL_REF = "v0.2.55"
+AGENT_ANVIL_REF = "v0.2.56"
 
 
 def load_yaml(path: Path) -> dict[str, object]:
